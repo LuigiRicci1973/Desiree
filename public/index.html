@@ -8,16 +8,16 @@
 </head>
 <body>
     <div id="login-screen">
-        <h1>Benvenuto nella stanza "Desiree"</h1>
-        <input type="text" id="name-input" placeholder="Inserisci il tuo nome">
+        <h1>Benvenuto nel tavolo del gioco "Desiree"</h1>
+        <input type="text" id="name-input" placeholder="Inserisci il tuo nome" oninput="this.value = this.value.toUpperCase()" >
         <button id="join-button">Entra nel Gioco</button>
     </div>
     <div id="game-screen" class="hidden">
         <div id="game-area">
             <div id="info-bar">
                 <div id="round-info">
-                    <h2>MANO NUMERO: <span id="round-number">0</span></h2>
-                    <h3 id="declarations-total">MANI DICHIARATE: 0</h3>
+                    <h3>ATTUALE NUMERO DI MANO: <span id="round-number">0</span></h3>
+                    <h3 id="declarations-total">TOTALE MANI DICHIARATE: 0</h3>
                 </div>
                 <div id="trump-area">Briscola: <span id="trump-card"></span></div>
             </div>
@@ -31,11 +31,11 @@
             <div id="action-area"></div>
         </div>
         <div id="sidebar">
-            <h3>Giocatori</h3>
+            <h3>Classifica attuale:</h3>
             <ul id="player-list"></ul>
             <button id="start-game-button" class="hidden">Inizia Partita</button>
             <div id="chat-area">
-                <h3>Chat</h3>
+                <h3>Chat tra i giocatori:</h3>
                 <div id="chat-messages"></div>
                 <input type="text" id="chat-input" placeholder="Scrivi un messaggio...">
             </div>
