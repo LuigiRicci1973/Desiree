@@ -1,8 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
-
     const socket = io();
 
-    // Elementi DOM
     const loginScreen = document.getElementById('login-screen');
     const gameScreen = document.getElementById('game-screen');
     const nameInput = document.getElementById('name-input');
@@ -20,14 +18,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const trumpCardSpan = document.getElementById('trump-card');
     const declarationsTotalSpan = document.getElementById('declarations-total');
 
-    // Stato del client
     let myId = null;
     let myHand = [];
     let currentRound = 0;
     let isMyTurnToPlay = false;
     let totalDeclarations = 0;
 
-    // Gestione Login e Chat
     joinButton.addEventListener('click', () => {
         const name = nameInput.value.trim();
         if (name) {
@@ -36,12 +32,10 @@ document.addEventListener('DOMContentLoaded', () => {
             gameScreen.classList.remove('hidden');
         }
     });
-
     startGameButton.addEventListener('click', () => {
         socket.emit('startGame');
         startGameButton.classList.add('hidden');
     });
-
     chatInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter' && chatInput.value) {
             socket.emit('sendMessage', chatInput.value);
@@ -49,38 +43,29 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // FUNZIONI DI RENDER
     function renderPlayersOnTable(players, turnOrder, dealerId) {
         topPlayersArea.innerHTML = '';
-        if(!turnOrder) return;
+        if (!turnOrder || !players) return;
         turnOrder.forEach(playerId => {
             const player = players[playerId];
             if (!player) return;
             const slot = document.createElement('div');
             slot.className = 'player-slot';
             slot.id = `player-slot-${player.id}`;
-            if (player.id === myId) {
-                slot.classList.add('my-player-highlight');
-            }
+            if (player.id === myId) slot.classList.add('my-player-highlight');
+            if (player.status === 'eliminated') slot.classList.add('eliminated');
             const isDealer = player.id === dealerId;
             const dealerTag = isDealer ? ' (M)' : '';
             const myTag = player.id === myId ? ' (Tu)' : '';
-            slot.innerHTML = `
-                <div class="player-name">${player.name}${myTag}${dealerTag}</div>
-                <div class="player-info">
-                    <div id="declaration-${player.id}">Dichiara: ?</div>
-                    <div id="tricks-${player.id}">Prese: 0</div>
-                </div>`;
+            slot.innerHTML = `<div class="player-name">${player.name}${myTag}${dealerTag}</div><div class="player-info"><div id="declaration-${player.id}">Dichiara: ?</div><div id="tricks-${player.id}">Prese: 0</div></div>`;
             if (isDealer) slot.style.borderColor = 'cyan';
             topPlayersArea.appendChild(slot);
         });
     }
-
     function renderPlayerList(players) {
         playerList.innerHTML = '';
-        Object.values(players).forEach(p => { playerList.innerHTML += `<li>${p.name} (Punti: ${p.score})</li>`; });
+        Object.values(players).forEach(p => { playerList.innerHTML += `<li><b>${p.score}</b> ... ${p.name}</li>`; });
     }
-
     function renderHand(hand, leadSuit = null) {
         myHand = hand;
         playerHandDiv.innerHTML = '';
@@ -97,7 +82,6 @@ document.addEventListener('DOMContentLoaded', () => {
             playerHandDiv.appendChild(cardDiv);
         });
     }
-
     function createCardDiv(card) {
         const div = document.createElement('div');
         div.className = 'card';
@@ -109,7 +93,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return div;
     }
 
-    // GESTIONE EVENTI DAL SERVER
     socket.on('connect', () => { myId = socket.id; });
     socket.on('canStart', () => { startGameButton.classList.remove('hidden'); });
     socket.on('updatePlayers', (players) => {
@@ -128,9 +111,18 @@ document.addEventListener('DOMContentLoaded', () => {
         if (trumpCard && trumpCard.suit !== 'NO_TRUMP') trumpCardSpan.appendChild(createCardDiv(trumpCard));
         renderPlayerList(players);
         renderPlayersOnTable(players, turnOrder, dealerId);
-        if (players[myId]) { myHand = players[myId].hand; renderHand(myHand); }
-        actionArea.innerHTML = '<h2>Inizia la fase di dichiarazione...</h2>';
+        if (players[myId] && players[myId].status === 'active') {
+             myHand = players[myId].hand;
+             renderHand(myHand);
+        } else {
+             playerHandDiv.innerHTML = '<h3>Sei stato eliminato. Puoi continuare a guardare la partita.</h3>';
+        }
         trickArea.innerHTML = '';
+    });
+    socket.on('updateStatus', (message) => {
+        if (!actionArea.querySelector('.declaration-button-container')) {
+            actionArea.innerHTML = `<h3>${message}</h3>`;
+        }
     });
     socket.on('yourTurnToDeclare', ({ forbiddenNumber }) => {
         actionArea.innerHTML = `<h3>Quante mani pensi di prendere?</h3>`;
@@ -188,12 +180,18 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => {
             winnerAnnouncement.remove();
             trickArea.innerHTML = '';
-            actionArea.innerHTML = '';
         }, 3000);
     });
     socket.on('roundOver', ({ scores }) => {
-        actionArea.innerHTML = `<h3>Fine Round!</h3> ${Object.values(scores).map(p => `<p>${p.name}: ${p.score} pt.</p>`).join('')}`;
+        actionArea.innerHTML = `<h3>Fine Round!</h3> ${Object.values(scores).map(p => `${p.name}: ${p.score} pt.</br>`).join('')}`;
         renderPlayerList(scores);
+    });
+    socket.on('playerEliminated', (playerName) => {
+        actionArea.innerHTML = `<h3 style="color: #ff8a80;">${playerName} è stato eliminato!</h3>`;
+    });
+    socket.on('youAreEliminated', () => {
+        playerHandDiv.innerHTML = '<h3>Sei stato eliminato. Puoi continuare a guardare la partita.</h3>';
+        actionArea.innerHTML = '';
     });
     socket.on('newMessage', ({ name, message }) => {
         const msgDiv = document.createElement('div');
